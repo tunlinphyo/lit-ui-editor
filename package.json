@@ -1,0 +1,68 @@
+{
+  "name": "lit-ui-editor",
+  "version": "0.1.0",
+  "description": "Lit web component content editor for plain JavaScript and Vue apps.",
+  "keywords": [
+    "cms",
+    "editor",
+    "lit",
+    "vue",
+    "web-components"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "*.css",
+    "src/**/*.css",
+    "src/**/*.js"
+  ],
+  "main": "./dist/lit-ui-editor.js",
+  "module": "./dist/lit-ui-editor.js",
+  "exports": {
+    ".": {
+      "import": "./dist/lit-ui-editor.js",
+      "default": "./dist/lit-ui-editor.js"
+    },
+    "./vue": {
+      "import": "./dist/vue.js",
+      "default": "./dist/vue.js"
+    },
+    "./style.css": "./dist/assets/lit-ui-editor.css",
+    "./src/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "vp dev",
+    "build": "vp build",
+    "preview": "vp preview",
+    "check": "vp check",
+    "lint": "vp lint",
+    "fmt": "vp fmt",
+    "prepack": "vp build"
+  },
+  "dependencies": {
+    "@vaadin/rich-text-editor": "^25.1.4",
+    "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+    "vite-plus": "latest"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "peerDependenciesMeta": {
+    "vue": {
+      "optional": true
+    }
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
+  },
+  "packageManager": "npm@11.16.0"
+}

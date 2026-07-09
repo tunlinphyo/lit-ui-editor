@@ -1,0 +1,13 @@
+@layer ui-editor-defaults {
+  :root {
+    --mark-default-background-size: 100%;
+    --mark-default-padding: 0 0.25rem;
+    --mark-default-border-radius: 0.2rem;
+    --mark-primary-background-size: 100% 70%;
+    --mark-primary-padding: 0;
+    --mark-primary-border-radius: 0;
+    --mark-secondary-background-size: 100% 40%;
+    --mark-secondary-padding: 0;
+    --mark-secondary-border-radius: 0;
+  }
+}

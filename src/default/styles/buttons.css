@@ -1,0 +1,7 @@
+@layer ui-editor-defaults {
+  button-block[disabled]::part(button) {
+    cursor: not-allowed;
+    background-color: var(--gray-400);
+    color: var(--gray-100);
+  }
+}

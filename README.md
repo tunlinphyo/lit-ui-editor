@@ -8,6 +8,19 @@ Lit web component content editor packaged for plain JavaScript and Vue applicati
 npm install lit-ui-editor
 ```
 
+For local package testing in another app, point that app at this package folder:
+
+```json
+{
+  "dependencies": {
+    "lit-ui-editor": "file:../../CODE/Lit/lit-ui-editor"
+  }
+}
+```
+
+Run `npm run build` in this package before installing or reinstalling it from the
+app. The published entry points load from `dist`.
+
 ## Plain JavaScript
 
 Import the package once to define the editor custom elements. Import the CSS when your bundler does not auto-include library CSS.
@@ -17,7 +30,7 @@ import "lit-ui-editor";
 import "lit-ui-editor/style.css";
 
 const editor = document.querySelector("rich-text-editor");
-editor.value = { groups: [] };
+await editor.init({ version: 1, groups: [] });
 
 editor.addEventListener("editor-change", (event) => {
   console.log(event.detail.value);
@@ -33,7 +46,7 @@ so applications do not need to mount toolbar elements separately.
 
 ## Vue 3
 
-Register the package side effects once, then tell Vue compiler that editor tags are custom elements.
+Register the package side effects once, then tell Vue compiler that editor tags are custom elements. Register custom groups/config before the app mounts or before calling `editor.init(pageData)`.
 
 ```js
 // main.js
@@ -41,6 +54,9 @@ import { createApp } from "vue";
 import "lit-ui-editor";
 import "lit-ui-editor/style.css";
 import App from "./App.vue";
+
+// Import app-specific group definitions here, before any saved page data is loaded.
+// import "./editor-groups.js";
 
 createApp(App).mount("#app");
 ```
@@ -74,14 +90,52 @@ import { onMounted, ref } from "vue";
 
 const editor = ref(null);
 
-onMounted(() => {
-  editor.value.value = { groups: [] };
-  editor.value.addEventListener("editor-change", (event) => {
+const pageData = {
+  version: 1,
+  groups: [],
+};
+
+onMounted(async () => {
+  const editorElement = editor.value;
+  if (!editorElement) return;
+
+  await editorElement.updateComplete;
+  await editorElement.init(pageData);
+
+  editorElement.addEventListener("editor-change", (event) => {
     console.log(event.detail.value);
   });
 });
 </script>
 ```
+
+When loading saved JSON from an API, pass it directly to `init` after custom group
+definitions have been registered:
+
+```vue
+<script setup>
+import { onMounted, ref } from "vue";
+
+const editor = ref(null);
+
+async function fetchPageData() {
+  const response = await fetch("/api/page");
+  return response.json();
+}
+
+onMounted(async () => {
+  const pageData = await fetchPageData();
+  const editorElement = editor.value;
+
+  await editorElement.updateComplete;
+  await editorElement.init(pageData);
+});
+</script>
+```
+
+Saved groups may omit optional fields such as `style` and `hashId`; the editor
+normalizes those defaults during `init`. Required fields are still `version`,
+`groups`, and each group `id`, `type`, `sort`, and `blocks`.
 
 ## Customize
 
@@ -135,32 +189,32 @@ editor.value = {
 
 Supported feature names by block:
 
-| Block type | Features |
-| --- | --- |
-| `text` | `fontFamily`, `fontSize`, `color`, `bold`, `italic`, `underline`, `orderedList`, `unorderedList`, `align`, `backgroundColor`, `link`, `linkTarget` |
-| `inline-text` | `type`, `fontFamily`, `fontSize`, `color`, `bold`, `italic`, `underline`, `align`, `link` |
-| `button` | `align`, `icon`, `color`, `backgroundColor`, `border`, `borderRadius`, `link`, `linkTarget`, `disabled` |
-| `image` | `align`, `imageUpload`, `objectFit`, `backgroundColor`, `border`, `borderRadius`, `link`, `linkTarget`, `disabled` |
-| `icon` | `fontSize`, `color`, `backgroundColor`, `border`, `borderRadius`, `link`, `linkTarget`, `disabled` |
-| `table` | `tableHeaders`, `backgroundColor`, `border` |
+| Block type    | Features                                                                                                                                           |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`        | `fontFamily`, `fontSize`, `color`, `bold`, `italic`, `underline`, `orderedList`, `unorderedList`, `align`, `backgroundColor`, `link`, `linkTarget` |
+| `inline-text` | `type`, `fontFamily`, `fontSize`, `color`, `bold`, `italic`, `underline`, `align`, `link`                                                          |
+| `button`      | `align`, `icon`, `color`, `backgroundColor`, `border`, `borderRadius`, `link`, `linkTarget`, `disabled`                                            |
+| `image`       | `align`, `imageUpload`, `objectFit`, `backgroundColor`, `border`, `borderRadius`, `link`, `linkTarget`, `disabled`                                 |
+| `icon`        | `fontSize`, `color`, `backgroundColor`, `border`, `borderRadius`, `link`, `linkTarget`, `disabled`                                                 |
+| `table`       | `tableHeaders`, `backgroundColor`, `border`                                                                                                        |
 
 Feature picker options come from these config keys:
 
-| Config key | Used by |
-| --- | --- |
-| `colors` | Text, icon, button, image, table, and group color controls |
-| `font-family` | Text font family picker |
-| `font-size` | Text and icon font size picker |
-| `element-type` | Inline text element picker |
-| `link-target` | Text, icon, button, image, and group link target picker |
-| `material-icons` | Icon and button icon picker |
-| `button-icon-placement` | Button icon placement picker |
-| `object-fit` | Image object-fit picker |
-| `border-width` | Icon, button, image, table, and group border width picker |
-| `border-style` | Icon, button, image, table, and group border style picker |
-| `border-position` | Icon, button, image, table, and group border position picker |
-| `border-radius` | Icon, button, image, and group border radius picker |
-| `mark-style` | Rich text highlight style picker |
+| Config key              | Used by                                                      |
+| ----------------------- | ------------------------------------------------------------ |
+| `colors`                | Text, icon, button, image, table, and group color controls   |
+| `font-family`           | Text font family picker                                      |
+| `font-size`             | Text and icon font size picker                               |
+| `element-type`          | Inline text element picker                                   |
+| `link-target`           | Text, icon, button, image, and group link target picker      |
+| `material-icons`        | Icon and button icon picker                                  |
+| `button-icon-placement` | Button icon placement picker                                 |
+| `object-fit`            | Image object-fit picker                                      |
+| `border-width`          | Icon, button, image, table, and group border width picker    |
+| `border-style`          | Icon, button, image, table, and group border style picker    |
+| `border-position`       | Icon, button, image, table, and group border position picker |
+| `border-radius`         | Icon, button, image, and group border radius picker          |
+| `mark-style`            | Rich text highlight style picker                             |
 
 ### Custom groups and pickers
 
@@ -218,14 +272,14 @@ HeroGroup.define("hero-group", {
 
 Group definitions support these common options:
 
-| Option | Description |
-| --- | --- |
-| `type` | Saved group type in editor JSON. |
-| `tagName` | Custom element tag. Added automatically when using `GroupBase.define()`. |
-| `label` | Name shown in picker dialogs. |
-| `picker` | Picker category for filtering. Use a string or array of strings. Defaults to `content`. |
-| `addable` | Set to `false` to hide the group from picker dialogs. |
-| `defaultStyle` | Initial style values used when a user adds the group. |
+| Option         | Description                                                                             |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `type`         | Saved group type in editor JSON.                                                        |
+| `tagName`      | Custom element tag. Added automatically when using `GroupBase.define()`.                |
+| `label`        | Name shown in picker dialogs.                                                           |
+| `picker`       | Picker category for filtering. Use a string or array of strings. Defaults to `content`. |
+| `addable`      | Set to `false` to hide the group from picker dialogs.                                   |
+| `defaultStyle` | Initial style values used when a user adds the group.                                   |
 
 Create a custom picker dialog by registering a picker tag with the group types it
 can add:

@@ -39,6 +39,9 @@
     "dev": "vp dev",
     "build": "vp build",
     "preview": "vp preview",
+    "test": "vitest run",
+    "test:text": "vitest run src/components/blocks/text/*.test.js",
+    "test:watch": "vitest",
     "check": "vp check",
     "lint": "vp lint",
     "fmt": "vp fmt",
@@ -49,8 +52,10 @@
     "lit": "^3.3.3"
   },
   "devDependencies": {
+    "happy-dom": "^20.0.10",
     "vite": "npm:@voidzero-dev/vite-plus-core@latest",
-    "vite-plus": "latest"
+    "vite-plus": "latest",
+    "vitest": "^4.1.9"
   },
   "peerDependencies": {
     "vue": "^3.5.0"
@@ -61,8 +66,7 @@
     }
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@latest",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
+    "vite": "npm:@voidzero-dev/vite-plus-core@latest"
   },
   "packageManager": "npm@11.16.0"
 }

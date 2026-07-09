@@ -25,12 +25,14 @@ const INLINE_FORMAT_SELECTOR = [
   ".text-underline",
   `.${TEXT_COLOR_CLASS}`,
   `.${TEXT_MARK_CLASS}`,
+  "[style*='font-size']",
 ].join(", ");
 const LIST_COMMANDS = new Set(["insertOrderedList", "insertUnorderedList"]);
 const LIST_COMMAND_TAGS = new Map([
   ["insertOrderedList", "ol"],
   ["insertUnorderedList", "ul"],
 ]);
+const BLOCK_CONTENT_SELECTOR = "p, ul, ol";
 
 export function applySelectionCommand({
   command,
@@ -70,10 +72,27 @@ export function applySelectionCommand({
     executeDocumentCommand(command, editor, paragraphMode, selection);
   }
 
+  cleanupTextFormatting(editor, selection);
+  if (paragraphMode && needsParagraphWrapping(editor)) {
+    mutatePreservingSelection(editor, selection, () => {
+      wrapParagraphContent(editor);
+    });
+    cleanupTextFormatting(editor, selection);
+  }
+  if (paragraphMode) cleanupEmptyParagraphs(editor);
+
   return {
-    range: selection.rangeCount ? selection.getRangeAt(0).cloneRange() : null,
+    range: getCommandResultRange(range, selection),
     shouldNotify: true,
   };
+}
+
+function getCommandResultRange(range, selection) {
+  if (!selection?.rangeCount) return range?.cloneRange() ?? null;
+
+  const selectedRange = selection.getRangeAt(0);
+  if (range && !range.collapsed && selectedRange.collapsed) return range.cloneRange();
+  return selectedRange.cloneRange();
 }
 
 export function describeSelectionFormat({
@@ -195,11 +214,16 @@ function applyFontSize(value, editor, range, selection) {
   if (selectionWithinFontSize) {
     insertWithFontSize(fontSizeElement, fragment, range, value);
   } else if (value) {
-    const element = document.createElement("span");
-    element.style.fontSize = value;
-    element.append(fragment);
-    range.insertNode(element);
-    range.selectNodeContents(element);
+    if (hasBlockContent(fragment)) {
+      applyFontSizeToTextNodes(fragment, value);
+      insertAndSelectFragment(fragment, range);
+    } else {
+      const element = document.createElement("span");
+      element.style.fontSize = value;
+      element.append(fragment);
+      range.insertNode(element);
+      range.selectNodeContents(element);
+    }
   } else {
     insertAndSelectFragment(fragment, range);
   }
@@ -278,6 +302,31 @@ function removeFontSize(fragment) {
   }
 }
 
+function hasBlockContent(fragment) {
+  return Array.from(fragment.childNodes).some(
+    (node) =>
+      node.nodeType === Node.ELEMENT_NODE &&
+      (node.matches(BLOCK_CONTENT_SELECTOR) || node.querySelector(BLOCK_CONTENT_SELECTOR)),
+  );
+}
+
+function applyFontSizeToTextNodes(fragment, value) {
+  const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  let node;
+
+  while ((node = walker.nextNode())) {
+    if (node.textContent) textNodes.push(node);
+  }
+
+  for (const textNode of textNodes) {
+    const element = document.createElement("span");
+    element.style.fontSize = value;
+    textNode.after(element);
+    element.append(textNode);
+  }
+}
+
 function removeTextColor(fragment) {
   for (const element of fragment.querySelectorAll(`.${TEXT_COLOR_CLASS}`)) {
     removeTextColorElement(element);
@@ -302,21 +351,61 @@ function insertWithTextColor(colorElement, fragment, range, value) {
 
   const selectedElement = colorElement.cloneNode(false);
   setTextColor(selectedElement, value);
+  inheritSelectedInlineFormat(selectedElement, range, {
+    stopElement: colorElement,
+    excludedClasses: [TEXT_COLOR_CLASS],
+    excludedStyles: ["color"],
+  });
   selectedElement.append(fragment);
 
   const selectedFragment = document.createDocumentFragment();
   selectedFragment.append(selectedElement);
-  addSelectionMarkers(selectedFragment);
+  const markers = addSelectionMarkers(selectedFragment);
   colorElement.after(selectedFragment, afterElement);
-  selectBetweenMarkers(range);
 
   removeEmptyInlineElement(colorElement);
   removeEmptyInlineElement(afterElement);
+  selectBetweenMarkers(range, markers);
 }
 
 function setTextColor(element, value) {
   element.classList.add(TEXT_COLOR_CLASS);
   element.style.color = value;
+}
+
+function inheritSelectedInlineFormat(
+  element,
+  range,
+  { stopElement = null, excludedClasses = [], excludedStyles = [] } = {},
+) {
+  let ancestor =
+    range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer
+      : range.startContainer.parentElement;
+  const excludedClassSet = new Set(excludedClasses);
+  const excludedStyleSet = new Set(excludedStyles);
+
+  while (ancestor && ancestor !== stopElement) {
+    if (ancestor.nodeType === Node.ELEMENT_NODE && ancestor.localName === "span") {
+      inheritInlineFormat(element, ancestor, { excludedClassSet, excludedStyleSet });
+    }
+    ancestor = ancestor.parentElement;
+  }
+}
+
+function inheritInlineFormat(element, source, { excludedClassSet, excludedStyleSet }) {
+  for (const className of source.classList) {
+    if (!excludedClassSet.has(className)) element.classList.add(className);
+  }
+
+  for (const property of Array.from(source.style)) {
+    if (excludedStyleSet.has(property) || element.style.getPropertyValue(property)) continue;
+    element.style.setProperty(
+      property,
+      source.style.getPropertyValue(property),
+      source.style.getPropertyPriority(property),
+    );
+  }
 }
 
 function removeTextMark(fragment) {
@@ -347,12 +436,12 @@ function insertWithTextMark(inlineElement, fragment, range, editor) {
 
   const selectedFragment = document.createDocumentFragment();
   selectedFragment.append(selectedElement);
-  addSelectionMarkers(selectedFragment);
+  const markers = addSelectionMarkers(selectedFragment);
   inlineElement.after(selectedFragment, afterElement);
-  selectBetweenMarkers(range);
 
   removeEmptyInlineElement(inlineElement);
   removeEmptyInlineElement(afterElement);
+  selectBetweenMarkers(range, markers);
 }
 
 function insertWithoutTextMark(markElement, fragment, range) {
@@ -365,6 +454,10 @@ function insertWithoutTextMark(markElement, fragment, range) {
 
   const selectedElement = markElement.cloneNode(false);
   removeTextMarkElement(selectedElement);
+  inheritSelectedInlineFormat(selectedElement, range, {
+    excludedClasses: [TEXT_MARK_CLASS, ...getMarkStyleClasses(markElement)],
+    excludedStyles: ["--mark-highlight-color"],
+  });
   selectedElement.append(fragment);
 
   const selectedFragment = document.createDocumentFragment();
@@ -374,12 +467,12 @@ function insertWithoutTextMark(markElement, fragment, range) {
     selectedFragment.append(...selectedElement.childNodes);
   }
 
-  addSelectionMarkers(selectedFragment);
+  const markers = addSelectionMarkers(selectedFragment);
   markElement.after(selectedFragment, afterElement);
-  selectBetweenMarkers(range);
 
   removeEmptyInlineElement(markElement);
   removeEmptyInlineElement(afterElement);
+  selectBetweenMarkers(range, markers);
 }
 
 function removeMarkAtCaret(markElement, range) {
@@ -414,6 +507,10 @@ function removeMarkStyleClasses(element) {
   }
 }
 
+function getMarkStyleClasses(element) {
+  return Array.from(element.classList).filter((className) => className.startsWith("mark-"));
+}
+
 function insertWithFontSize(fontSizeElement, fragment, range, value) {
   const afterRange = document.createRange();
   afterRange.setStart(range.startContainer, range.startOffset);
@@ -435,12 +532,12 @@ function insertWithFontSize(fontSizeElement, fragment, range, value) {
     selectedFragment.append(...selectedElement.childNodes);
   }
 
-  addSelectionMarkers(selectedFragment);
+  const markers = addSelectionMarkers(selectedFragment);
   fontSizeElement.after(selectedFragment, afterElement);
-  selectBetweenMarkers(range);
 
   removeEmptyInlineElement(fontSizeElement);
   removeEmptyInlineElement(afterElement);
+  selectBetweenMarkers(range, markers);
 }
 
 export function removeEmptyInlineElement(element) {
@@ -472,6 +569,10 @@ function insertWithoutTextColor(colorElement, fragment, range) {
 
   const selectedElement = colorElement.cloneNode(false);
   removeTextColorElement(selectedElement);
+  inheritSelectedInlineFormat(selectedElement, range, {
+    excludedClasses: [TEXT_COLOR_CLASS],
+    excludedStyles: ["color"],
+  });
   selectedElement.append(fragment);
 
   const selectedFragment = document.createDocumentFragment();
@@ -481,12 +582,12 @@ function insertWithoutTextColor(colorElement, fragment, range) {
     selectedFragment.append(...selectedElement.childNodes);
   }
 
-  addSelectionMarkers(selectedFragment);
+  const markers = addSelectionMarkers(selectedFragment);
   colorElement.after(selectedFragment, afterElement);
-  selectBetweenMarkers(range);
 
   removeEmptyInlineElement(colorElement);
   removeEmptyInlineElement(afterElement);
+  selectBetweenMarkers(range, markers);
 }
 
 function removeTextColorAtCaret(colorElement, range) {
@@ -506,35 +607,38 @@ function removeTextColorElement(element) {
 }
 
 function insertAndSelectFragment(fragment, range) {
-  addSelectionMarkers(fragment);
+  const markers = addSelectionMarkers(fragment);
   range.insertNode(fragment);
-  selectBetweenMarkers(range);
+  selectBetweenMarkers(range, markers);
 }
 
 function addSelectionMarkers(fragment) {
-  fragment.prepend(document.createComment("selection-start"));
-  fragment.append(document.createComment("selection-end"));
+  const startMarker = document.createComment("selection-start");
+  const endMarker = document.createComment("selection-end");
+  fragment.prepend(startMarker);
+  fragment.append(endMarker);
+  return { startMarker, endMarker };
 }
 
-function selectBetweenMarkers(range) {
-  const root = range.commonAncestorContainer.getRootNode();
-  const iterator = document.createNodeIterator(root, NodeFilter.SHOW_COMMENT);
-  let startMarker = null;
-  let endMarker = null;
-  let node;
-
-  while ((node = iterator.nextNode())) {
-    if (node.data === "selection-start") startMarker = node;
-    if (node.data === "selection-end") endMarker = node;
-    if (startMarker && endMarker) break;
-  }
-
+function selectBetweenMarkers(range, { startMarker, endMarker }) {
   if (!startMarker || !endMarker) return;
 
-  range.setStartAfter(startMarker);
-  range.setEndBefore(endMarker);
+  const startParent = startMarker.parentNode;
+  const endParent = endMarker.parentNode;
+  const startOffset = getNodeIndex(startMarker);
+  const endOffset = getNodeIndex(endMarker);
+
   startMarker.remove();
   endMarker.remove();
+
+  if (!startParent || !endParent) return;
+
+  range.setStart(startParent, startOffset);
+  range.setEnd(endParent, startParent === endParent ? endOffset - 1 : endOffset);
+}
+
+function getNodeIndex(node) {
+  return Array.prototype.indexOf.call(node.parentNode?.childNodes ?? [], node);
 }
 
 function toggleInlineCommand(command, editor, range, selection) {
@@ -603,12 +707,12 @@ function insertWithInlineClass(inlineElement, fragment, range, className) {
 
   const selectedFragment = document.createDocumentFragment();
   selectedFragment.append(selectedElement);
-  addSelectionMarkers(selectedFragment);
+  const markers = addSelectionMarkers(selectedFragment);
   inlineElement.after(selectedFragment, afterElement);
-  selectBetweenMarkers(range);
 
   removeEmptyInlineElement(inlineElement);
   removeEmptyInlineElement(afterElement);
+  selectBetweenMarkers(range, markers);
 }
 
 function insertWithoutInlineClass(inlineElement, fragment, range, className) {
@@ -621,6 +725,9 @@ function insertWithoutInlineClass(inlineElement, fragment, range, className) {
 
   const selectedElement = inlineElement.cloneNode(false);
   selectedElement.classList.remove(className);
+  inheritSelectedInlineFormat(selectedElement, range, {
+    excludedClasses: [className],
+  });
   removeInlineFormat(fragment, `.${className}`);
   selectedElement.append(fragment);
 
@@ -631,12 +738,12 @@ function insertWithoutInlineClass(inlineElement, fragment, range, className) {
     selectedFragment.append(...selectedElement.childNodes);
   }
 
-  addSelectionMarkers(selectedFragment);
+  const markers = addSelectionMarkers(selectedFragment);
   inlineElement.after(selectedFragment, afterElement);
-  selectBetweenMarkers(range);
 
   removeEmptyInlineElement(inlineElement);
   removeEmptyInlineElement(afterElement);
+  selectBetweenMarkers(range, markers);
 }
 
 function removeInlineClass(formatElement, className, range) {
@@ -673,8 +780,231 @@ function hasInlineFormatClass(element) {
 function cleanupTextSpanElement(element) {
   if (element.getAttribute("style") === "") element.removeAttribute("style");
   if (element.getAttribute("class") === "") element.removeAttribute("class");
+  if (element.localName === "span" && !hasInlineElementContent(element)) {
+    element.remove();
+    return true;
+  }
+  if (element.localName === "span" && isFormatterWhitespaceOnly(element)) {
+    element.remove();
+    return true;
+  }
+  if (element.localName === "span" && element.querySelector(BLOCK_CONTENT_SELECTOR)) {
+    unwrapBlockChildrenFromTextSpan(element);
+    return true;
+  }
   if (element.localName === "span" && !shouldKeepTextSpan(element)) {
     element.replaceWith(...element.childNodes);
+    return true;
+  }
+  if (
+    element.localName === "span" &&
+    !containsSelectionMarker(element) &&
+    pushSpanFormatIntoChildren(element)
+  ) {
+    return true;
+  }
+  if (
+    element.localName === "span" &&
+    !containsSelectionMarker(element) &&
+    mergeFollowingTextSpans(element)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function containsSelectionMarker(element) {
+  const iterator = document.createNodeIterator(element, NodeFilter.SHOW_COMMENT);
+  let node;
+
+  while ((node = iterator.nextNode())) {
+    if (node.data === "selection-start" || node.data === "selection-end") return true;
+  }
+
+  return false;
+}
+
+function pushSpanFormatIntoChildren(element) {
+  if (!isPlainTextSpan(element)) return false;
+
+  const childSpans = [];
+  for (const child of element.childNodes) {
+    if (child.nodeType === Node.TEXT_NODE && child.textContent.trim() === "") continue;
+    if (
+      child.nodeType === Node.ELEMENT_NODE &&
+      child.localName === "span" &&
+      isPlainTextSpan(child)
+    ) {
+      childSpans.push(child);
+      continue;
+    }
+    return false;
+  }
+  if (!childSpans.length) return false;
+  if (!childSpans.every((child) => canInheritSpanFormat(child, element))) return false;
+
+  for (const child of childSpans) inheritSpanFormat(child, element);
+  element.replaceWith(...element.childNodes);
+  return true;
+}
+
+function mergeFollowingTextSpans(element) {
+  if (!isPlainTextSpan(element)) return false;
+
+  let changed = false;
+  let next = element.nextSibling;
+
+  while (next) {
+    if (next.nodeType === Node.TEXT_NODE && next.textContent.trim() === "") {
+      const spacer = next;
+      const following = spacer.nextSibling;
+      if (!canMergeTextSpans(element, following)) break;
+
+      element.append(spacer);
+      element.append(...following.childNodes);
+      following.remove();
+      changed = true;
+      next = element.nextSibling;
+      continue;
+    }
+
+    if (!canMergeTextSpans(element, next)) break;
+
+    element.append(...next.childNodes);
+    next.remove();
+    changed = true;
+    next = element.nextSibling;
+  }
+
+  return changed;
+}
+
+function canMergeTextSpans(first, second) {
+  return (
+    second?.nodeType === Node.ELEMENT_NODE &&
+    second.localName === "span" &&
+    isPlainTextSpan(second) &&
+    getTextSpanSignature(first) === getTextSpanSignature(second)
+  );
+}
+
+function isPlainTextSpan(element) {
+  return Array.from(element.attributes).every((attribute) =>
+    attribute.name === "class" || attribute.name === "style",
+  );
+}
+
+function canInheritSpanFormat(child, parent) {
+  const childMarkClass = getMarkStyleClass(child);
+  const parentMarkClass = getMarkStyleClass(parent);
+  if (childMarkClass && parentMarkClass && childMarkClass !== parentMarkClass) return false;
+
+  for (const property of Array.from(parent.style)) {
+    const parentValue = parent.style.getPropertyValue(property);
+    const childValue = child.style.getPropertyValue(property);
+    if (childValue && childValue !== parentValue) return false;
+  }
+
+  return true;
+}
+
+function inheritSpanFormat(child, parent) {
+  for (const className of parent.classList) {
+    child.classList.add(className);
+  }
+
+  for (const property of Array.from(parent.style)) {
+    if (child.style.getPropertyValue(property)) continue;
+    child.style.setProperty(
+      property,
+      parent.style.getPropertyValue(property),
+      parent.style.getPropertyPriority(property),
+    );
+  }
+}
+
+function getTextSpanSignature(element) {
+  const classes = Array.from(element.classList).sort().join(".");
+  const styles = Array.from(element.style)
+    .sort()
+    .map((property) => {
+      const priority = element.style.getPropertyPriority(property);
+      return `${property}:${element.style.getPropertyValue(property)}:${priority}`;
+    })
+    .join(";");
+
+  return `${classes}|${styles}`;
+}
+
+function hasInlineElementContent(element) {
+  const hasText = element.textContent.length > 0;
+  const hasRenderedElement = element.querySelector(
+    "audio, br, canvas, embed, hr, iframe, img, input, object, select, svg, textarea, video",
+  );
+
+  return hasText || hasRenderedElement;
+}
+
+function isFormatterWhitespaceOnly(element) {
+  if (!shouldKeepTextSpan(element)) return false;
+  if (!/^\s+$/.test(element.textContent)) return false;
+  if (!/[\r\n\t]/.test(element.textContent)) return false;
+
+  return !element.querySelector(
+    "audio, br, canvas, embed, hr, iframe, img, input, object, select, svg, textarea, video",
+  );
+}
+
+function cleanupTextFormatting(editor, selection) {
+  const cleanup = () => {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const element of Array.from(editor.querySelectorAll("span")).reverse()) {
+        changed = cleanupTextSpanElement(element) || changed;
+      }
+    }
+  };
+  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+
+  if (range?.collapsed) {
+    cleanup();
+  } else {
+    mutatePreservingSelection(editor, selection, cleanup);
+  }
+}
+
+function unwrapBlockChildrenFromTextSpan(element) {
+  const blockElements = Array.from(element.querySelectorAll("p, li"));
+
+  for (const blockElement of blockElements) {
+    if (isEmptyBlockElement(blockElement)) continue;
+
+    const wrapper = element.cloneNode(false);
+    wrapper.append(...blockElement.childNodes);
+    blockElement.append(wrapper);
+  }
+
+  element.replaceWith(...element.childNodes);
+}
+
+function isEmptyBlockElement(element) {
+  const text = element.textContent.replace(/[\u00a0\u200b-\u200d\ufeff]/g, "").trim();
+  const hasEmbeddedContent = element.querySelector(
+    "audio, canvas, embed, hr, iframe, img, input, object, select, svg, textarea, video",
+  );
+
+  return text === "" && !hasEmbeddedContent;
+}
+
+function cleanupEmptyParagraphs(editor) {
+  const paragraphs = Array.from(editor.children).filter((element) => element.tagName === "P");
+  const hasContent = paragraphs.some((paragraph) => !isEmptyBlockElement(paragraph));
+  if (!hasContent) return;
+
+  for (const paragraph of paragraphs) {
+    if (isEmptyBlockElement(paragraph)) paragraph.remove();
   }
 }
 

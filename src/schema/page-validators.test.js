@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { expect, test } from "vitest";
 import { validatePage } from "./page-validators.js";
 
 function createPage(block) {

@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { expect, test } from "vitest";
 import { FEATURES } from "../../../registries/formatter-registry.js";
 import { resolveSupportedFeatures } from "../text/text-capabilities.js";
 import { INLINE_TEXT_FEATURES } from "./inline-text-capabilities.js";

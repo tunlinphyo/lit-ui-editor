@@ -542,7 +542,7 @@ export function isSelectionInside(editor, selection) {
 
 export function selectRange(selection, range) {
   selection.removeAllRanges();
-  selection.addRange(range);
+  selection.addRange(range.cloneRange());
 }
 
 export function rangesMatch(firstRange, secondRange) {
@@ -560,7 +560,16 @@ export function getSelectedAncestor(editor, range, selector) {
   if (!editor || !range) return null;
 
   let element = range.startContainer;
-  if (element.nodeType !== Node.ELEMENT_NODE) element = element.parentElement;
+  if (element.nodeType === Node.ELEMENT_NODE) {
+    const selectedChild = element.childNodes[range.startOffset];
+    if (selectedChild?.nodeType === Node.ELEMENT_NODE) {
+      if (selectedChild.matches(selector)) return selectedChild;
+      const descendant = selectedChild.querySelector?.(selector);
+      if (descendant) return descendant;
+    }
+  } else {
+    element = element.parentElement;
+  }
 
   while (element && element !== editor) {
     if (element.matches(selector)) return element;

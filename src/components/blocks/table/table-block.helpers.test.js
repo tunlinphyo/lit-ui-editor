@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { expect, test } from "vitest";
 import { createCell, createCellValue, normalizeCell } from "./table-block.helpers.js";
 
 test("creates table cells without global font weight", () => {

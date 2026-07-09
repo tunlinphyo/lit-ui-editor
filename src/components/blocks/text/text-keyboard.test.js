@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { expect, test } from "vitest";
 import { ENTER_ACTIONS, getEnterAction } from "./text-keyboard.js";
 
 test("uses standard Enter behavior for paragraph rich text", () => {

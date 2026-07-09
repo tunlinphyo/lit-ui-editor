@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { expect, test } from "vitest";
 import { isComposedDescendant } from "./editor-selection.js";
 
 test("finds a block nested through a group shadow root", () => {

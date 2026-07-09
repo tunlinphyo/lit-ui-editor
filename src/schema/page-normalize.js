@@ -4,7 +4,7 @@ import { assertValidPage } from "./page-validators.js";
 export const CURRENT_PAGE_VERSION = 1;
 
 export function normalizePage(input = DEFAULT_PAGE) {
-  assertValidPage(input);
+  assertValidPage(createValidationPage(input));
   const page = createDefaultPage(input);
 
   return {
@@ -26,6 +26,26 @@ function normalizeGroup(group = {}) {
     sort: group.sort ?? 0,
     style: createDefaultGroupStyle(group.style),
     blocks: blocks.map(normalizeBlock),
+  };
+}
+
+function createValidationPage(input) {
+  if (!isObject(input) || !Array.isArray(input.groups)) return input;
+
+  return {
+    ...input,
+    groups: input.groups.map(createValidationGroup),
+  };
+}
+
+function createValidationGroup(group) {
+  if (!isObject(group)) return group;
+
+  return {
+    ...group,
+    hashId: group.hashId ?? "",
+    sort: group.sort ?? 0,
+    style: Object.hasOwn(group, "style") ? group.style : createDefaultGroupStyle(),
   };
 }
 
@@ -54,4 +74,8 @@ function normalizeNavChildren(children = []) {
 
 function bySort(a = {}, b = {}) {
   return (a.sort ?? 0) - (b.sort ?? 0);
+}
+
+function isObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

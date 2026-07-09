@@ -33,20 +33,31 @@ export function serializeEditor(editor) {
 
 function removeEmptyValues(value) {
   if (Array.isArray(value)) {
-    return value.filter(hasValue).map(removeEmptyValues);
+    return value.map(removeEmptyValues).filter(hasValue);
   }
   if (!value || typeof value !== "object") return value;
 
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([key, child]) => hasValue(child, key))
-      .map(([key, child]) => [key, removeEmptyValues(child)]),
-  );
+  const entries = Object.entries(value)
+    .map(([key, child]) => [key, removeEmptyValues(child)])
+    .filter(([key, child]) => hasValue(child, key));
+
+  return Object.fromEntries(entries);
 }
 
 function hasValue(value, key) {
   if (key === "value" && value === "") return true;
-  return value !== "" && value !== null && value !== undefined;
+  if (value === "" || value === null || value === undefined) return false;
+  return !isEmptyPlainObject(value);
+}
+
+function isEmptyPlainObject(value) {
+  return (
+    value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype &&
+    Object.keys(value).length === 0
+  );
 }
 
 function getContentBlocks(editor) {

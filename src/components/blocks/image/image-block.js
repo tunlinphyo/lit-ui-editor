@@ -218,7 +218,7 @@ export class ImageBlock extends LitElement {
     }
     if (property === "borderStyle" && (!value || value === "none")) {
       this.borderWidth = "";
-      this.borderColor = null;
+      this.borderColor = "";
       this.borderPosition = "";
     }
     if (property === "borderWidth" && value && !this.borderStyle) this.borderStyle = "solid";

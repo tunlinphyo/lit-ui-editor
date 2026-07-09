@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { expect, test } from "vitest";
 import { FEATURES, getCapabilities } from "./formatter-registry.js";
 
 test("icon defaults match the dedicated icon toolbar controls", () => {

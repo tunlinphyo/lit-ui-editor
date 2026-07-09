@@ -1,4 +1,4 @@
-import { expect, test } from "vite-plus/test";
+import { expect, test } from "vitest";
 import { deserializeTextChildren, serializeHtml, serializeTextChildren } from "./text-utils.js";
 
 test("removes empty list-adjacent and trailing editor paragraphs", () => {

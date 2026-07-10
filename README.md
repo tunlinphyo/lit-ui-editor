@@ -156,6 +156,28 @@ registerConfig({
 registerGroup({ type: "custom", tagName: "custom-group", label: "Custom" });
 ```
 
+### Custom blocks
+
+Register application-specific block types before calling `editor.init(pageData)`. The
+custom group that owns the block must render the matching custom element.
+
+```js
+import "lit-ui-editor";
+import { registerBlock } from "lit-ui-editor";
+import "./merchant-benefits-block.js";
+
+registerBlock({
+  type: "merchant-benefits",
+  tagName: "merchant-benefits-block",
+  selector: "merchant-benefits-block",
+  text: false,
+  formattable: false,
+});
+```
+
+For Vue, place this registration in `main.js` or an imported editor setup module so
+it runs before the editor component mounts and calls `init(pageData)`.
+
 ### Block features
 
 Each block can opt in to a subset of toolbar features with a `features` array. Omit

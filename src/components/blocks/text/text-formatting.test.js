@@ -824,12 +824,20 @@ test("keeps paragraph structure valid when font size crosses paragraph boundarie
     },
     {
       type: "paragraph",
+      children: [],
+    },
+    {
+      type: "paragraph",
       children: [
         {
           text: "「30％プレミアム付ほくペイ」申込開始「ダウンロードキャンペーン」開始",
           marks: { fontSize: "var(--font-size-base)" },
         },
       ],
+    },
+    {
+      type: "paragraph",
+      children: [],
     },
     {
       type: "paragraph",
@@ -843,6 +851,34 @@ test("keeps paragraph structure valid when font size crosses paragraph boundarie
           },
         },
       ],
+    },
+  ]);
+});
+
+test("preserves empty rich-text paragraphs between content paragraphs during cleanup", () => {
+  const editor = createRichTextEditor(
+    "<p></p><p>First</p><p></p><p><br></p><p>Second</p><p></p>",
+  );
+
+  applyNoopCleanupCommand(editor, true);
+
+  expectValidParagraphEditorDom(editor);
+  expect(serializeCleanTextChildren(editor)).toEqual([
+    {
+      type: "paragraph",
+      children: [{ text: "First" }],
+    },
+    {
+      type: "paragraph",
+      children: [],
+    },
+    {
+      type: "paragraph",
+      children: [],
+    },
+    {
+      type: "paragraph",
+      children: [{ text: "Second" }],
     },
   ]);
 });

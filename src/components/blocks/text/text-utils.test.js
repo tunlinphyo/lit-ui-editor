@@ -201,6 +201,30 @@ test("deserializes rich-text list children", () => {
   expect(value).toBe("<p>Intro</p><ol><li>One</li><li>Two</li></ol>");
 });
 
+test("deserializes empty rich-text paragraphs between content paragraphs", () => {
+  const value = withFakeDocument(() =>
+    deserializeTextChildren(
+      [
+        {
+          type: "paragraph",
+          children: [{ text: "First" }],
+        },
+        {
+          type: "paragraph",
+          children: [],
+        },
+        {
+          type: "paragraph",
+          children: [{ text: "Second" }],
+        },
+      ],
+      { paragraphMode: true },
+    ),
+  );
+
+  expect(value).toBe("<p>First</p><p><br></p><p>Second</p>");
+});
+
 test("deserializes rich-text font size marks", () => {
   const value = withFakeDocument(() =>
     deserializeTextChildren(

@@ -1004,8 +1004,31 @@ function cleanupEmptyParagraphs(editor) {
   if (!hasContent) return;
 
   for (const paragraph of paragraphs) {
-    if (isEmptyBlockElement(paragraph)) paragraph.remove();
+    if (!isEmptyBlockElement(paragraph) || isEmptyParagraphBetweenParagraphs(paragraph)) continue;
+    paragraph.remove();
   }
+}
+
+function isEmptyParagraphBetweenParagraphs(paragraph) {
+  const previous = getPreviousNonEmptyBlockElement(paragraph);
+  const next = getNextNonEmptyBlockElement(paragraph);
+  return previous?.tagName === "P" && next?.tagName === "P";
+}
+
+function getPreviousNonEmptyBlockElement(element) {
+  let previous = element.previousElementSibling;
+  while (previous?.tagName === "P" && isEmptyBlockElement(previous)) {
+    previous = previous.previousElementSibling;
+  }
+  return previous;
+}
+
+function getNextNonEmptyBlockElement(element) {
+  let next = element.nextElementSibling;
+  while (next?.tagName === "P" && isEmptyBlockElement(next)) {
+    next = next.nextElementSibling;
+  }
+  return next;
 }
 
 function shouldKeepTextSpan(element) {

@@ -9,6 +9,12 @@ export function getBlockDefinition(type) {
   return blockDefinitions.get(type) ?? null;
 }
 
+export function isBlockTypeRegistered(type) {
+  return [...blockDefinitions.values()].some(
+    (definition) => definition.type === type || definition.schemaTypes?.includes(type),
+  );
+}
+
 export function listBlockDefinitions() {
   return [...blockDefinitions.values()];
 }

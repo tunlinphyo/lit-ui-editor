@@ -1,4 +1,5 @@
 import { INLINE_TEXT_ELEMENT_TYPES, PAGE_BLOCK_TYPES, isRichTextType } from "./page.schema.js";
+import { isBlockTypeRegistered } from "../registries/block-registry.js";
 
 export function assertValidPage(page) {
   const errors = validatePage(page);
@@ -56,7 +57,11 @@ function validateBlock(block, path, errors) {
 
   requireString(block.id, `${path}.id`, errors);
   requireString(block.type, `${path}.type`, errors);
-  if (typeof block.type === "string" && !PAGE_BLOCK_TYPES.has(block.type)) {
+  if (
+    typeof block.type === "string" &&
+    !PAGE_BLOCK_TYPES.has(block.type) &&
+    !isBlockTypeRegistered(block.type)
+  ) {
     errors.push(`${path}.type is not registered: ${block.type}`);
   }
 

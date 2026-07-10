@@ -355,6 +355,7 @@ function appendListElement(output, child) {
 function appendParagraphElement(output, children) {
   const paragraph = document.createElement("p");
   paragraph.innerHTML = deserializeTextChildren(children);
+  if (!paragraph.innerHTML) paragraph.append(document.createElement("br"));
   output.append(paragraph);
 }
 

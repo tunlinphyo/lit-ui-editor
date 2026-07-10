@@ -23,6 +23,13 @@ export {
   registerList,
 } from "./registries/list-registry.js";
 export {
+  getBlockDefinition,
+  getBlockSelector,
+  isBlockTypeRegistered,
+  listBlockDefinitions,
+  registerBlock,
+} from "./registries/block-registry.js";
+export {
   getMaterialIconNames,
   materialSymbolStyles,
   renderMaterialIcon,

@@ -890,8 +890,8 @@ function canMergeTextSpans(first, second) {
 }
 
 function isPlainTextSpan(element) {
-  return Array.from(element.attributes).every((attribute) =>
-    attribute.name === "class" || attribute.name === "style",
+  return Array.from(element.attributes).every(
+    (attribute) => attribute.name === "class" || attribute.name === "style",
   );
 }
 

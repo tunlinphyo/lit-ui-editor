@@ -668,22 +668,10 @@ test("preserves bold when recoloring part of a fully bold rich-text block", () =
   applyRichTextCommand(editor, selected.range, selected.selection, "bold");
 
   selected = selectAllText(editor);
-  applyRichTextCommand(
-    editor,
-    selected.range,
-    selected.selection,
-    "foreColor",
-    "var(--brand-900)",
-  );
+  applyRichTextCommand(editor, selected.range, selected.selection, "foreColor", "var(--brand-900)");
 
   selected = selectText(editor, "ほくペイ");
-  applyRichTextCommand(
-    editor,
-    selected.range,
-    selected.selection,
-    "foreColor",
-    "var(--brand-600)",
-  );
+  applyRichTextCommand(editor, selected.range, selected.selection, "foreColor", "var(--brand-600)");
 
   expect(serializeCleanTextChildren(editor)).toEqual([
     {

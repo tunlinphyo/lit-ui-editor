@@ -10,9 +10,22 @@
     "web-components"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunlinphyo/lit-ui-editor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tunlinphyo/lit-ui-editor/issues"
+  },
+  "homepage": "https://github.com/tunlinphyo/lit-ui-editor#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "files": [
     "dist",
     "src",
+    "!src/**/*.test.js",
     "README.md"
   ],
   "type": "module",
@@ -45,6 +58,7 @@
     "check": "vp check",
     "lint": "vp lint",
     "fmt": "vp fmt",
+    "publish:dry-run": "npm pack --dry-run",
     "prepack": "vp build"
   },
   "dependencies": {

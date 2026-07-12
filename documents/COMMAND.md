@@ -14,3 +14,13 @@ git commit -m "Release v0.1.4"
 git tag v0.1.4
 git push origin main --tags
 ```
+
+### Delete Tag
+
+```bash
+git tag -d v0.1.4
+git push origin :refs/tags/v0.1.4
+
+git tag v0.1.4
+git push origin main --tags
+```

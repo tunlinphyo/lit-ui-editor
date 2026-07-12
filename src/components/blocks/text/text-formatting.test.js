@@ -472,6 +472,26 @@ test("creates a link with target while keeping existing rich-text marks", () => 
   ]);
 });
 
+test("keeps a link when applying rich-text marks after link creation", () => {
+  const editor = createRichTextEditor("<p>Read the docs today</p>");
+  const selected = selectText(editor, "docs");
+
+  let result = applyRichTextCommand(editor, selected.range, selected.selection, "link", "/docs");
+  result = applyRichTextCommand(editor, result.range, selected.selection, "bold");
+  applyRichTextCommand(editor, result.range, selected.selection, "foreColor", "#2563eb");
+
+  expect(serializeCleanTextChildren(editor)).toEqual([
+    {
+      type: "paragraph",
+      children: [
+        { text: "Read the " },
+        { text: "docs", marks: { link: "/docs", bold: true, color: "#2563eb" } },
+        { text: " today" },
+      ],
+    },
+  ]);
+});
+
 test("prepares a link preview and replaces it with a link", () => {
   const editor = createRichTextEditor("<p>Read the docs today</p>");
   const selected = selectText(editor, "docs");

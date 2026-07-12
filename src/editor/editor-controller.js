@@ -12,6 +12,7 @@ const PRESERVE_SELECTION_CONTROLS = new Set([
   "format-bold",
   "format-italic",
   "format-underline",
+  "format-font-size",
   "format-ordered-list",
   "format-unordered-list",
   "format-align-left",
@@ -19,7 +20,16 @@ const PRESERVE_SELECTION_CONTROLS = new Set([
   "format-align-right",
   "format-align-justify",
   "format-highlight",
+  "format-mark-style",
+  "format-link",
+  "format-link-target",
+  "format-text-color",
+  "format-text-color-palette",
 ]);
+
+export function shouldPreserveToolbarSelection(path) {
+  return path.some((element) => PRESERVE_SELECTION_CONTROLS.has(element.localName));
+}
 
 export class EditorController {
   constructor(editor) {
@@ -265,11 +275,7 @@ export class EditorController {
     if (!event.composedPath().some((element) => element.localName === "format-toolbar")) return;
 
     this.activeBlock?.captureSelection?.({ preserve: true });
-    if (
-      event.composedPath().some((element) => PRESERVE_SELECTION_CONTROLS.has(element.localName))
-    ) {
-      event.preventDefault();
-    }
+    if (shouldPreserveToolbarSelection(event.composedPath())) event.preventDefault();
   };
 
   #focusin = (event) => {

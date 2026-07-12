@@ -1,6 +1,6 @@
 {
   "name": "lit-ui-editor",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Lit web component content editor for plain JavaScript and Vue apps.",
   "keywords": [
     "cms",
@@ -62,7 +62,6 @@
     "prepack": "vp build"
   },
   "dependencies": {
-    "@vaadin/rich-text-editor": "^25.1.4",
     "lit": "^3.3.3"
   },
   "devDependencies": {

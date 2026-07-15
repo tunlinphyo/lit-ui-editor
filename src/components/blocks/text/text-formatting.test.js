@@ -844,10 +844,6 @@ test("keeps paragraph structure valid when font size crosses paragraph boundarie
     },
     {
       type: "paragraph",
-      children: [],
-    },
-    {
-      type: "paragraph",
       children: [
         {
           text: "「30％プレミアム付ほくペイ」申込開始「ダウンロードキャンペーン」開始",
@@ -875,7 +871,7 @@ test("keeps paragraph structure valid when font size crosses paragraph boundarie
   ]);
 });
 
-test("preserves empty rich-text paragraphs between content paragraphs during cleanup", () => {
+test("preserves only explicit rich-text blank lines during cleanup", () => {
   const editor = createRichTextEditor(
     "<p></p><p>First</p><p></p><p><br></p><p>Second</p><p></p>",
   );
@@ -894,13 +890,22 @@ test("preserves empty rich-text paragraphs between content paragraphs during cle
     },
     {
       type: "paragraph",
-      children: [],
-    },
-    {
-      type: "paragraph",
       children: [{ text: "Second" }],
     },
   ]);
+});
+
+test("does not leave an empty paragraph when sizing a selection across rich-text paragraphs", () => {
+  const editor = createRichTextEditor(
+    "<p>Intro</p><p><br></p><p>Heading</p><p>Details</p><p>Schedule</p>",
+  );
+  const selected = selectTextRange(editor, "Details", "Schedule");
+
+  applyRichTextCommand(editor, selected.range, selected.selection, "fontSize", "18px");
+
+  expect(editor.innerHTML).toBe(
+    '<p>Intro</p><p><br></p><p>Heading</p><p><span style="font-size: 18px;">Details</span></p><p><span style="font-size: 18px;">Schedule</span></p>',
+  );
 });
 
 test("updates and removes color from a collapsed caret inside colored text", () => {

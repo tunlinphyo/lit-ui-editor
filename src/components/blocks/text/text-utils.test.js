@@ -1,5 +1,10 @@
 import { expect, test } from "vitest";
-import { deserializeTextChildren, serializeHtml, serializeTextChildren } from "./text-utils.js";
+import {
+  deserializeTextChildren,
+  normalizeParagraphs,
+  serializeHtml,
+  serializeTextChildren,
+} from "./text-utils.js";
 
 test("removes empty list-adjacent and trailing editor paragraphs", () => {
   const value = "<p>First</p><p></p><ol><li>One</li><li>Two</li></ol><p>Last</p><p></p>";
@@ -17,6 +22,12 @@ test("preserves intentional blank lines", () => {
   const value = "<p>First</p><p><br></p><p>Second</p><p></p><p>Third</p>";
 
   expect(serializeHtml(value)).toBe(value);
+});
+
+test("normalizes preserved empty rich-text paragraphs to contain a break", () => {
+  const value = "<p>First</p><p></p><p>Second</p>";
+
+  expect(normalizeParagraphs(value, "p")).toBe("<p>First</p><p><br></p><p>Second</p>");
 });
 
 test("removes trailing breaks from the final paragraph", () => {

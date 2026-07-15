@@ -1004,9 +1004,16 @@ function cleanupEmptyParagraphs(editor) {
   if (!hasContent) return;
 
   for (const paragraph of paragraphs) {
-    if (!isEmptyBlockElement(paragraph) || isEmptyParagraphBetweenParagraphs(paragraph)) continue;
+    if (!isEmptyBlockElement(paragraph)) continue;
+    if (hasExplicitParagraphBreak(paragraph) && isEmptyParagraphBetweenParagraphs(paragraph)) {
+      continue;
+    }
     paragraph.remove();
   }
+}
+
+function hasExplicitParagraphBreak(paragraph) {
+  return Boolean(paragraph.querySelector("br"));
 }
 
 function isEmptyParagraphBetweenParagraphs(paragraph) {

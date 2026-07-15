@@ -57,6 +57,7 @@ export function normalizeParagraphs(value, type) {
   }
 
   removeEditorEmptyParagraphsAroundLists(output);
+  addBreaksToPreservedEmptyParagraphs(output);
   return output.innerHTML;
 }
 
@@ -74,6 +75,20 @@ function removeEditorEmptyParagraphsAroundLists(root) {
     ) {
       paragraph.remove();
     }
+  }
+}
+
+function addBreaksToPreservedEmptyParagraphs(root) {
+  for (const paragraph of Array.from(root.children)) {
+    if (
+      paragraph.tagName !== "P" ||
+      !isEmptyParagraphElement(paragraph) ||
+      paragraph.querySelector("br")
+    ) {
+      continue;
+    }
+
+    paragraph.replaceChildren(document.createElement("br"));
   }
 }
 

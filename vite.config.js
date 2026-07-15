@@ -13,7 +13,7 @@ export default defineConfig({
       formats: ["es"],
     },
     rollupOptions: {
-      external: ["lit", "@vaadin/rich-text-editor", "vue"],
+      external: ["lit", "vue"],
       output: {
         assetFileNames: (assetInfo) =>
           assetInfo.name === "style.css" ? "lit-ui-editor.css" : "assets/[name][extname]",

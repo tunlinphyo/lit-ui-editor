@@ -124,6 +124,24 @@ describe("button-block", () => {
       target: "_self",
     });
   });
+
+  test("preserves line breaks as br tags and strips other HTML", async () => {
+    const block = await createButtonBlock({ text: "Buy now<br><strong>Limited</strong> offer" });
+    const editor = block.renderRoot.querySelector(".text");
+
+    expect(block.toJSON().text).toBe("Buy now<br>Limited offer");
+    expect(editor.innerHTML).toBe("Buy now<br>Limited offer");
+
+    editor.innerHTML = "<em>Save</em><br><img src=x>today";
+    editor.dispatchEvent(new Event("input"));
+    expect(block.toJSON().text).toBe("Save<br>today");
+  });
+
+  test("keeps the label editable when the button is disabled", async () => {
+    const block = await createButtonBlock({ disabled: true });
+
+    expect(block.renderRoot.querySelector(".text").contentEditable).toBe("plaintext-only");
+  });
 });
 
 async function createButtonBlock(options = {}) {

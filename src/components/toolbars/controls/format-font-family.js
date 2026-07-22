@@ -7,6 +7,9 @@ export class FormatFontFamily extends PickerPopoverControl {
   static popoverId = "font-families";
   static title = "Font family";
   static fallbackLabel = "Font";
+  // The toolbar value can lag behind the active block during a selection
+  // change, so selecting the displayed family must still apply it.
+  static reapplySelectedValue = true;
 
   constructor() {
     super();

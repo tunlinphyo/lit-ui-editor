@@ -22,6 +22,7 @@ export class TableBlock extends LitElement {
   static properties = {
     blockId: { type: String, attribute: "block-id", reflect: true },
     cells: { state: true },
+    columnWidths: { state: true },
     headerRow: { type: Boolean, attribute: "header-row", reflect: true },
     headerColumn: { type: Boolean, attribute: "header-column", reflect: true },
     headerBackgroundColor: {
@@ -55,6 +56,7 @@ export class TableBlock extends LitElement {
     super();
     this.blockId = "";
     this.cells = createCells(DEFAULT_ROWS, DEFAULT_COLUMNS);
+    this.columnWidths = {};
     this.headerRow = true;
     this.headerColumn = false;
     this.headerBackgroundColor = "";
@@ -74,6 +76,7 @@ export class TableBlock extends LitElement {
     const {
       id = "",
       cells = options.rows,
+      columnWidths = [],
       headerRow = true,
       headerColumn = false,
       headerBackgroundColor = "",
@@ -89,6 +92,7 @@ export class TableBlock extends LitElement {
 
     this.blockId = id;
     this.cells = normalizeCells(cells);
+    this.columnWidths = normalizeColumnWidths(columnWidths, this.cells[0].length);
     this.headerRow = Boolean(headerRow);
     this.headerColumn = Boolean(headerColumn);
     this.headerBackgroundColor = String(headerBackgroundColor || "");
@@ -110,6 +114,7 @@ export class TableBlock extends LitElement {
       id: this.blockId,
       type: "table",
       cells: this.#readCells(),
+      columnWidths: this.columnWidths,
       headerRow: this.headerRow,
       headerColumn: this.headerColumn,
       headerBackgroundColor: this.headerBackgroundColor,
@@ -174,6 +179,7 @@ export class TableBlock extends LitElement {
       nextRow.splice(insertionIndex, 0, createCell());
       return nextRow;
     });
+    this.columnWidths = shiftColumnWidths(this.columnWidths, insertionIndex, 1);
     this.selectedAxis = "column";
     this.selectedIndex = insertionIndex;
     this.#notifyChange();
@@ -186,6 +192,7 @@ export class TableBlock extends LitElement {
     const cells = this.#readCells();
     const removalIndex = clampIndex(index, cells[0].length);
     this.cells = cells.map((row) => row.filter((_, columnIndex) => columnIndex !== removalIndex));
+    this.columnWidths = shiftColumnWidths(this.columnWidths, removalIndex, -1);
     if (this.selectedAxis === "column") {
       this.selectedIndex = Math.min(removalIndex, this.cells[0].length - 1);
     }
@@ -196,6 +203,19 @@ export class TableBlock extends LitElement {
   setHeaderRow(enabled) {
     this.cells = this.#readCells();
     this.headerRow = Boolean(enabled);
+    this.#notifyChange();
+    return true;
+  }
+
+  setColumnWidth(index, width) {
+    const columnIndex = clampIndex(index, this.cells[0].length);
+    const normalizedWidth = normalizeColumnWidth(width);
+    if (normalizedWidth === null) return false;
+
+    this.cells = this.#readCells();
+    this.columnWidths = { ...this.columnWidths };
+    if (normalizedWidth) this.columnWidths[columnIndex] = normalizedWidth;
+    else delete this.columnWidths[columnIndex];
     this.#notifyChange();
     return true;
   }
@@ -264,8 +284,10 @@ export class TableBlock extends LitElement {
         index: this.selectedIndex,
         rowCount: this.cells.length,
         columnCount: this.cells[0].length,
+        columnWidth: this.columnWidths[this.selectedIndex] || "",
         onAdd: this.#addAxis,
         onRemove: this.#removeAxis,
+        onSetColumnWidth: this.#setColumnWidth,
         onClose: this.#clearSelection,
         onToggle: this.#onPopoverToggle,
       })}
@@ -296,6 +318,14 @@ export class TableBlock extends LitElement {
             --table-border-style: ${this.borderStyle || "none"};
           `}
         >
+          <colgroup>
+            ${this.cells[0].map(
+              (_, index) =>
+                html`<col
+                  style=${this.columnWidths[index] ? `width: ${this.columnWidths[index]}` : ""}
+                />`,
+            )}
+          </colgroup>
           ${this.headerRow
             ? html`<thead>
                 ${this.#renderRow(this.cells[0], 0)}
@@ -388,6 +418,8 @@ export class TableBlock extends LitElement {
 
   #removeAxis = (axis, index) =>
     axis === "row" ? this.removeRow(index) : this.removeColumn(index);
+
+  #setColumnWidth = (index, width) => this.setColumnWidth(index, width);
 
   async #selectAxis(axis, index) {
     if (this.selectedAxis === axis && this.selectedIndex === index) {
@@ -485,4 +517,38 @@ function isValidTableBorderPosition(value) {
     .split(/\s+/)
     .filter(Boolean)
     .every((position) => TABLE_BORDER_POSITIONS.includes(position));
+}
+
+function normalizeColumnWidths(widths, columnCount) {
+  return Object.fromEntries(
+    Object.entries(widths || {})
+      .filter(
+        ([index]) =>
+          Number.isInteger(Number(index)) && Number(index) >= 0 && Number(index) < columnCount,
+      )
+      .map(([index, width]) => [index, normalizeColumnWidth(width)])
+      .filter(([, width]) => width),
+  );
+}
+
+function shiftColumnWidths(widths, index, offset) {
+  return Object.fromEntries(
+    Object.entries(widths)
+      .filter(([columnIndex]) => offset > 0 || Number(columnIndex) !== index)
+      .map(([columnIndex, width]) => {
+        const nextIndex =
+          Number(columnIndex) >= index ? Number(columnIndex) + offset : Number(columnIndex);
+        return [nextIndex, width];
+      }),
+  );
+}
+
+function normalizeColumnWidth(value) {
+  const width = String(value ?? "").trim();
+  if (!width) return "";
+
+  const match = width.match(/^(?:0|[1-9]\d*)(?:\.\d+)?\s*(px|%)?$/i);
+  if (!match) return null;
+
+  return `${width.replace(/\s+/g, "").replace(/(px|%)/i, "")}${match[1]?.toLowerCase() || "px"}`;
 }

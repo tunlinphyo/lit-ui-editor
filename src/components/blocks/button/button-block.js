@@ -108,7 +108,7 @@ export class ButtonBlock extends LitElement {
     } = options;
 
     this.blockId = id;
-    this.text = text;
+    this.text = sanitizeButtonText(text);
     this.icon = icon;
     this.iconPosition = iconPosition === "start" || iconPosition === "end" ? iconPosition : "none";
     this.iconFontSize = iconFontSize;
@@ -283,7 +283,7 @@ export class ButtonBlock extends LitElement {
           class="text"
           role="textbox"
           aria-label=${this.placeholder}
-          contenteditable=${this.disabled ? "false" : "plaintext-only"}
+          contenteditable="plaintext-only"
           data-placeholder=${this.placeholder}
           @keydown=${this.#keydown}
           @input=${this.#input}
@@ -340,18 +340,40 @@ export class ButtonBlock extends LitElement {
   };
 
   #input = (event) => {
-    const text = event.currentTarget.textContent ?? "";
-    this.text = text.trim() ? text : "";
+    const text = sanitizeButtonText(event.currentTarget.innerHTML);
+    this.text = text.replace(/<br>/g, "").trim() ? text : "";
     if (!this.text) event.currentTarget.replaceChildren();
   };
 
   #keydown = (event) => {
     if (event.key !== "Enter" || event.isComposing) return;
     event.preventDefault();
+    this.#insertLineBreak();
   };
 
   #syncText() {
-    if (this.#textElement) this.#textElement.textContent = this.text;
+    if (this.#textElement) this.#textElement.innerHTML = sanitizeButtonText(this.text);
+  }
+
+  #insertLineBreak() {
+    const textElement = this.#textElement;
+    const selection = this.renderRoot.getSelection?.() ?? document.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+
+    if (!range || !textElement?.contains(range.commonAncestorContainer)) {
+      textElement?.append(document.createElement("br"));
+      this.#input({ currentTarget: textElement });
+      return;
+    }
+
+    range.deleteContents();
+    const lineBreak = document.createElement("br");
+    range.insertNode(lineBreak);
+    range.setStartAfter(lineBreak);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    this.#input({ currentTarget: textElement });
   }
 
   get #textElement() {
@@ -429,4 +451,32 @@ function toBorderWidthValue(width, position) {
   const positions = ["top", "right", "bottom", "left"];
 
   return positions.map((side) => (selected.has(side) ? width : "0")).join(" ");
+}
+
+function sanitizeButtonText(value) {
+  const template = document.createElement("template");
+  const output = document.createElement("template");
+  template.innerHTML = String(value ?? "");
+
+  const appendText = (text) => {
+    text.split(/\r\n?|\n/).forEach((line, index) => {
+      if (index) output.content.append(document.createElement("br"));
+      if (line) output.content.append(document.createTextNode(line));
+    });
+  };
+  const appendNode = (node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      appendText(node.textContent ?? "");
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    if (node.tagName === "BR") {
+      output.content.append(document.createElement("br"));
+      return;
+    }
+    node.childNodes.forEach(appendNode);
+  };
+
+  template.content.childNodes.forEach(appendNode);
+  return output.innerHTML;
 }

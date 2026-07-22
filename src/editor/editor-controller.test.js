@@ -5,7 +5,10 @@ function element(localName) {
   return { localName };
 }
 
-test("preserves toolbar selection for link and text color controls", () => {
+test("preserves toolbar selection for font, link, and text color controls", () => {
+  expect(
+    shouldPreserveToolbarSelection([element("format-font-family"), element("format-toolbar")]),
+  ).toBe(true);
   expect(shouldPreserveToolbarSelection([element("format-link"), element("format-toolbar")])).toBe(
     true,
   );

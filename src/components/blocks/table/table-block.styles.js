@@ -31,6 +31,26 @@ export const tableBlockStyles = css`
     color: #b42318;
   }
 
+  .column-width-field {
+    display: grid;
+    grid-template-columns: 1fr 5rem;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 10rem;
+    padding: 0.35rem 0;
+    font-size: 0.75rem;
+  }
+
+  .column-width-field input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 1.5rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font: inherit;
+  }
+
   .selection-popup .close {
     width: 2rem;
     padding: 0;

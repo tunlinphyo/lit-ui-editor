@@ -19,7 +19,7 @@ export const buttonBlockStyles = css`
     gap: 0.5rem;
     width: auto;
     min-width: 2rem;
-    height: 2.5rem;
+    min-height: 2.5rem;
     padding: 0 1.5rem;
     border: 2px solid transparent;
     border-radius: 999px;
@@ -59,7 +59,7 @@ export const buttonBlockStyles = css`
     font: inherit;
     font-weight: inherit;
     text-align: inherit;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .text:empty::before {

@@ -9,10 +9,25 @@ export const formatToolbarStyles = css`
   }
 
   .tools h2 {
+    place-self: center;
+    width: min-content;
     text-align: center;
     font-size: 1.1rem;
     font-weight: normal;
     margin: 0;
+    position: relative;
+  }
+
+  .tools h2::after {
+    position: absolute;
+    left: 0;
+    bottom: 0.1rem;
+    content: '';
+    display: block;
+    width: 100%;
+    height: 2px;
+    border-radius: 2px;
+    background-color: var(--ui-editor-highlight);
   }
 
   .format-group {

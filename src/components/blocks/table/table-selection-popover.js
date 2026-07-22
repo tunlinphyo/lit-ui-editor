@@ -6,8 +6,10 @@ export function renderTableSelectionPopover({
   index,
   rowCount,
   columnCount,
+  columnWidth,
   onAdd,
   onRemove,
+  onSetColumnWidth,
   onClose,
   onToggle,
 }) {
@@ -40,6 +42,21 @@ export function renderTableSelectionPopover({
                 ${renderMaterialIcon("close")}
               </button>
             </header>
+            ${!isRow
+              ? html`
+                  <label class="column-width-field">
+                    <span>Width</span>
+                    <input
+                      type="text"
+                      inputmode="decimal"
+                      placeholder="Auto"
+                      aria-label=${`Width for ${label}`}
+                      .value=${columnWidth}
+                      @change=${(event) => onSetColumnWidth(index, event.target.value)}
+                    />
+                  </label>
+                `
+              : null}
             <button type="button" @click=${() => onAdd(axis, index)}>
               Add ${isRow ? "Row Above" : "Column Before"}
             </button>

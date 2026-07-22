@@ -13,6 +13,7 @@ export class PickerPopoverControl extends PopoverControl {
   static popoverId = "picker-options";
   static title = "Options";
   static fallbackLabel = "Select";
+  static reapplySelectedValue = false;
   static styles = pickerPopoverControlStyles;
 
   constructor() {
@@ -82,7 +83,8 @@ export class PickerPopoverControl extends PopoverControl {
 
   applyValue(value) {
     this.closePopover();
-    if (value === this.value) return;
+
+    if (value === this.value && !this.constructor.reapplySelectedValue) return;
 
     this.value = value;
     this.dispatchValueChange(value);

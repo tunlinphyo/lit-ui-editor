@@ -13,7 +13,7 @@ export const groupBaseStyles = css`
   }
 
   :host([active]) [data-group-box] {
-    outline: 2px solid var(--ui-editor-highlight);
+    outline: 2px solid var(--ui-editor-primary);
     outline-offset: 2px;
   }
 

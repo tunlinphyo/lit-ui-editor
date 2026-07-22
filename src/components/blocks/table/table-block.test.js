@@ -36,6 +36,21 @@ describe("table-block", () => {
     expect(block.toJSON().cells[0]).toHaveLength(1);
   });
 
+  test("sets optional column widths, defaulting unitless values to pixels", async () => {
+    const block = await createTableBlock({
+      cells: [[{ children: [{ text: "A" }] }, { children: [{ text: "B" }] }]],
+    });
+
+    expect(block.setColumnWidth(0, "120")).toBe(true);
+    expect(block.setColumnWidth(1, "50%")).toBe(true);
+    expect(block.setColumnWidth(1, "wide")).toBe(false);
+    expect(block.toJSON().columnWidths).toEqual({ 0: "120px", 1: "50%" });
+
+    block.addColumn(1);
+    block.removeColumn(0);
+    expect(block.toJSON().columnWidths).toEqual({ 1: "50%" });
+  });
+
   test("toggles table options and cleans dependent border styles", async () => {
     const block = await createTableBlock({
       stripedRows: true,

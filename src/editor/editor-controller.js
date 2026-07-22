@@ -9,6 +9,7 @@ import { deserializeEditor, serializeEditor } from "./editor-serializer.js";
 import { findSelectionTargets, isComposedDescendant } from "./editor-selection.js";
 
 const PRESERVE_SELECTION_CONTROLS = new Set([
+  "format-font-family",
   "format-bold",
   "format-italic",
   "format-underline",
